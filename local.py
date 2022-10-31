@@ -142,7 +142,7 @@ def main():
             if os.path.exists(filename):
               temp=open(filename)
               lines=temp.readlines()
-             # print("Normal modes found \n")
+              print("Normal modes found \n")
               for line in lines:
                    if num_line == num:
                        norm_mode=float64(line.split()[0:])
@@ -262,6 +262,7 @@ def main():
                    )  # Run aims and pipe the output into a file named 'filename'
                os.chdir("..")
             return alpha
+        print('The calculation started..')
         alpha_pos=postpro('pos',num)
         alpha_neg=postpro('neg',num)
         # Intensity
