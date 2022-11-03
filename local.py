@@ -51,6 +51,9 @@ def moveCOM(height,col,gridinfo):
     COM = molc.get_center_of_mass(scaled=False)
     molc.write('geometry.in',format='aims')
     return n_atoms
+def fraction(f,norm_mode):
+    frac=f/(np.linalg.norm(norm_mode))
+    return frac
 def main():
 
     parser = ArgumentParser(description="BEC calculation with FHI-aims")
@@ -87,10 +90,10 @@ def main():
     )
     parser.add_argument(
         "-f",
-        "--fraction",
+        "--displacement",
         action="store",
         type=float,
-        help="Finite difference fraction",
+        help="The displacement of the mode in cartesian AA",
         default=0.01,
     )
     parser.add_argument("-p", "--plot", action="store_true",help="Generate TERS image")
@@ -103,7 +106,7 @@ def main():
     name = options.name
     num = options.mode
     num=num[0]
-    frac = options.fraction
+    f = options.displacement
     z = options.height
     n=options.step
     d=options.size
@@ -142,7 +145,6 @@ def main():
             if os.path.exists(filename):
               temp=open(filename)
               lines=temp.readlines()
-              print("Normal modes found \n")
               for line in lines:
                    if num_line == num:
                        norm_mode=float64(line.split()[0:])
@@ -177,6 +179,7 @@ def main():
         def shift_geo(direction,num):
             fdata2=[]
             norm_mode=car_modes(num)
+            frac=fraction(f,norm_mode)
             fdata, element =read_geo('geometry.in')
             pos=fdata+frac*norm_mode
             neg=fdata-frac*norm_mode
@@ -228,6 +231,10 @@ def main():
             os.chdir("..")
         precontrol('control.in', 'pos',num)
         precontrol('control.in', 'neg',num)
+    print('The calculation started..')
+    norm_mode=car_modes(num)
+    frac=fraction(f,norm_mode)
+    print('fraction of shifting of the normal mode',frac)
     for col in range(n[0]*n[1]):
         def postpro(direction,num):
             """Function to read outputs"""
@@ -262,7 +269,6 @@ def main():
                    )  # Run aims and pipe the output into a file named 'filename'
                os.chdir("..")
             return alpha
-        print('The calculation started..')
         alpha_pos=postpro('pos',num)
         alpha_neg=postpro('neg',num)
         # Intensity
