@@ -51,19 +51,19 @@ def moveCOM(height,col,gridinfo):
     COM = molc.get_center_of_mass(scaled=False)
     molc.write('geometry.in',format='aims')
     return n_atoms
-def fraction(f,norm_mode):
+def fraction(f,norm_mode): # norm_mode is here the mode in Cartesian coordinates
     frac=f/(np.linalg.norm(norm_mode))
     return frac
 def main():
 
-    parser = ArgumentParser(description="BEC calculation with FHI-aims")
+    parser = ArgumentParser(description="TERS model calculation with FHI-aims")
     parser.add_argument("--name", dest="name", action="store",
-                        help='The atomic symbol of the atoms to be displaced',
+                        help='The atomic symbol of the atoms to be displaced', # MR: this description looks off, please review
                         required=True)
     parser.add_argument(
         "-i", "--info", action="store_true", help="Set up/ Calculate vibrations & quit"
     )
-    parser.add_argument("-n", '--step',action="store", type=int, nargs=2, dest="step")
+    parser.add_argument("-n", '--step',action="store", type=int, nargs=2, dest="step") # MR: Could you add a description/help here and in the next 3 arguments?
     parser.add_argument("-d",'--size', action="store", type=float, nargs=2, dest="size")
     parser.add_argument("-t",'--tip', action="store", type=float, nargs=3, dest="tip")
     parser.add_argument(
@@ -71,9 +71,9 @@ def main():
     )
     parser.add_argument(
         "-s",
-        "--suffix",
+        "--suffix", # MR: should be called prefix, not suffix
         action="store",
-        help="Call suffix for binary e.g. 'mpirun -np 12 '",
+        help="Call prefix for binary e.g. 'mpirun -np 12 '",
         default="",
     )
     parser.add_argument(
@@ -85,18 +85,18 @@ def main():
         "--height",
         action="store",
         type=float,
-        help="distance from tip",
-        default=0.01,
+        help="Distance from tip apex (please check the coordinates of the apex)",
+        default=1.0,
     )
     parser.add_argument(
         "-f",
         "--displacement",
         action="store",
         type=float,
-        help="The displacement of the mode in cartesian AA",
-        default=0.01,
+        help="The displacement of mode coordinate in Angstroms",
+        default=0.002,
     )
-    parser.add_argument("-p", "--plot", action="store_true",help="Generate TERS image")
+    parser.add_argument("-p", "--plot", action="store_true",help="Generate TERS image with pyplot")
     options = parser.parse_args()
     if options.info:
         print(__doc__)
@@ -149,10 +149,10 @@ def main():
                    if num_line == num:
                        norm_mode=float64(line.split()[0:])
                    if num > (3*n_atoms): #3*n
-                     print('The mode you are requesting doesnt exist :)')
+                     print('The mode you are requesting does not exist :)')
                    num_line=num_line+1
             else:
-              print("Normal modes not found, run get_vibrations.py in mode 1")
+              print("Normal modes not found, run get_vibrations.py (run mode = 1)")
               sys.exit(1)
             norm_mode=norm_mode.reshape(n_atoms,3)
             norm_mode=np.array(norm_mode)
@@ -285,11 +285,9 @@ def main():
         alpha= (alphasxx + alphasyy + alphaszz)*(1./3)
         beta=(alphasxx-alphasyy)**2+(alphasxx-alphaszz)**2+(alphasyy-alphaszz)**2+6*((alphasxy)**2+(alphasxz)**2+(alphasyz)**2)
         #man Scattering Intensity:
-        raman_intensity=45*(alpha**2)+(7./2)*(beta)
-        I=raman_intensity*0.02195865620442408 #bohr^6/ang^2 to ang^4
-        I2=((alphaszz)**2)*0.02195865620442408 #bohr^6/ang^2 to ang^4
+        I=((alphaszz)**2)*0.02195865620442408 #bohr^6/ang^2 to ang^4
         # Saving Intensity
-        newline_ir=newline_ir+'{0:25.8f} {1:25.8f}{2:25.8f}\n'.format(scanxyz[col][0],scanxyz[col][1],I2)
+        newline_ir=newline_ir+'{0:25.8f} {1:25.8f}{2:25.8f}\n'.format(scanxyz[col][0],scanxyz[col][1],I)
 
 
         ir=open(irname,'w')
@@ -330,7 +328,7 @@ def main():
        rcParams.update(params)
        fig = plt.figure(figsize=(6.5, 6.5))
        gridx, gridy, gridz = np.loadtxt(name+'.data', unpack=True)
-       gridx=gridx-(-0.000030)
+       gridx=gridx-(-0.000030) # MR: Can we read this from the variable instead of hardcoding?
        gridy=gridy-(-1.696604)
        N = int(len(gridz)**.5)
        Z = gridz.reshape(N, N)
