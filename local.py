@@ -58,16 +58,16 @@ def main():
 
     parser = ArgumentParser(description="TERS model calculation with FHI-aims")
     parser.add_argument("--name", dest="name", action="store",
-                        help='The molecular name, that has to be the same as requuested by get_vibrations.py',
+                        help='A string identifying the file where the eigenvectors will be read from. Works with usual outputs of get_vibrations.py. E.g. use C6H6 if the file is car_eig_vec.C6H6.dat ',
                         required=True)
     parser.add_argument(
         "-i", "--info", action="store_true", help="Set up/ Calculate vibrations & quit"
     )
-    parser.add_argument("-n", '--step',action="store", type=int, nargs=2, dest="step",help='is the size of the grid (number of steps)')
-    parser.add_argument("-d",'--size', action="store", type=float, nargs=2, dest="size",help='the step size of the grid, starting at tip Apex position, used to define the position of the tip with respect to the center of mass of the molecule')
-    parser.add_argument("-t",'--tip', action="store", type=float, nargs=3, dest="tip",help='the tip apex position that is given in the position.dat file in A (-0.000030 -1.696604 -4.6140)')
+    parser.add_argument("-n", '--step',action="store", type=int, nargs=2, dest="step",help='is the number of steps of the 2D grid in which to scan the TERS image (number of steps in each direction)')
+    parser.add_argument("-d",'--size', action="store", type=float, nargs=2, dest="size",help='the step size of the 2D grid. The COM of the system will be aligned to the tip apex and the grid is defined around it in each direction as np.linspace(origin-(n-1)*step, origin+(n-1)*step, n)')
+    parser.add_argument("-t",'--tip', action="store", type=float, nargs=3, dest="tip",help='the tip apex position that is given in the position.dat file in angstrom (Example: -0.000030 -1.696604 -4.6140)')
     parser.add_argument(
-        "-r", "--run", action="store", help="path to FHI-aims binary", default=""
+        "-r", "--run", action="store", help="path of FHI-aims binary", default=""
     )
     parser.add_argument(
         "-s",
