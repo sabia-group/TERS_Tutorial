@@ -1,9 +1,13 @@
+#!/usr/bin/env python3
 """
  !  Alaa Akkoush (Fritz Haber Institute)
  !  HISTORY
- !  February 2020
+ !  November 2022 
   python3 local.py --name C6H6  -z 3 -m 14 14 -f 0.002 -d 0.4 0.4 -n 11 11 -t -0.000030 -1.696604 -4.614046
 """
+__author__      = "Alaa Akkoush"
+__version__ = "1.0"
+
 from argparse import ArgumentParser
 from scipy import constants
 import os, sys
