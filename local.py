@@ -3,7 +3,7 @@
  !  Alaa Akkoush (Fritz Haber Institute)
  !  Minor tweaks by Mariana Rossi (2022)
  !  HISTORY
- !  November 2022 
+ !  November 2022
   python3 local.py --name C6H6  -z 3 -m 14 14 -f 0.002 -d 0.4 0.4 -n 11 11 -t -0.000030 -1.696604 -4.614046
 """
 __author__      = "Alaa Akkoush"
@@ -309,7 +309,7 @@ def main():
 
        rc('text', usetex=True)
        SMALL_SIZE = 14
-       MEDIUM_SIZE = 16
+       MEDIUM_SIZE = 18
        BIGGER_SIZE = 20
        plt.rc('font', size=MEDIUM_SIZE)          # controls default text sizes
        plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
@@ -321,10 +321,10 @@ def main():
        #plt.rcParams['font.family'] = 'serif'
        #plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
        params = {
-               'axes.labelsize': 20,
-               'font.size': 20,
-               'xtick.labelsize': 20,
-               'ytick.labelsize': 20,
+               'axes.labelsize': 22,
+               'font.size': 22,
+               'xtick.labelsize': 22,
+               'ytick.labelsize': 22,
                'mathtext.fontset': 'stix',
                #'font.family': 'sans-serif',
                #'font.sans-serif': 'Arial',
