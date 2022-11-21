@@ -16,13 +16,16 @@
 
 """
 
-from scipy import constants, signal
-from numpy import array, reshape, zeros, ones, linalg, identity, float64, append, sqrt, arange, newaxis, delete, sum
-import copy, os, shutil
-from sklearn import preprocessing
-import numpy as np
-import time
+import copy
+import os
+import shutil
 import sys
+import time
+
+from numpy import (append, arange, array, float64, identity, newaxis, ones,
+                   sqrt, sum, zeros)
+from scipy import constants
+from sklearn import preprocessing
 
 USAGE = """%prog [options] <name> <mode>
 
@@ -155,6 +158,7 @@ def lorentz(pi,g,x):
     return lr - lr.min()
 def main():
   import optparse
+
   from numpy import sum
 
   # Parse command line
@@ -224,7 +228,8 @@ will be replaced by name + counter, string
     from pylab import figure
 
   if options.plot or  mode=='2' or mode=='1':
-    from pylab import savetxt, transpose, eig, argsort, sort, sign, pi, dot, sum, linspace, argmin, r_, convolve
+    from pylab import (argmin, argsort, convolve, dot, eig, linspace, pi, r_,
+                       savetxt, sign, sort, sum, transpose)
 
   # Constant from scipy.constants
   bohr=constants.value('Bohr radius')*1.e10
@@ -335,6 +340,7 @@ will be replaced by name + counter, string
   print('Number of atoms considered in fequency calcualtion: '+str(n_constrained))
   if struc.periodic:
      import numpy as np
+
      #find the reciprocal lattice vectors
      rec_lat= np.linalg.pinv(rec_lat).transpose()
      # Normalize the lattice vectors
