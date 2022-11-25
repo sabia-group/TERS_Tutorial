@@ -4,17 +4,15 @@
  !  Minor tweaks by Mariana Rossi (2022)
  !  HISTORY
  !  November 2022
-  python3 local.py --name C6H6  -z 3 -m 14 14 -f 0.002 -d 0.4 0.4 -n 11 11 -t -0.000030 -1.696604 -4.614046
+   python3 local.py --name C6H6 -s srun -r path-of-FHIaims-binary -z 3 -m 11 -f 0.0025 -d 0.5 0.5 -n 8 8 -t -0.000030 -1.696604 -4.614046 --plot
 """
-__author__ = "Alaa Akkoush"
-__version__ = "1.0"
-
 import os
 import shutil
 import sys
 from argparse import ArgumentParser
 
 import numpy as np
+from numpy import *
 from ase import Atoms
 from ase.io import read
 from numpy import *
@@ -45,10 +43,6 @@ def split_line(lines):
 
 
 def moveCOM(height, col, gridinfo):
-    from ase import Atoms
-    from ase.build import molecule
-    from ase.io import read, write
-
     scanxyz = construct_grid(gridinfo)
     molc = read("geometry.in", format="aims")
     n_atoms = len((molc.numbers))
@@ -65,6 +59,161 @@ def moveCOM(height, col, gridinfo):
 def fraction(f, norm_mode):  # norm_mode is here the mode in Cartesian coordinates
     frac = f / (np.linalg.norm(norm_mode))
     return frac
+
+# Reading the normal modes from get_vibrations.py
+def car_modes(n_atoms,name,num):
+    num_line = 1
+    norm_mode = np.array([])
+    filename = "car_eig_vec." + str(name) + ".dat"
+    if os.path.exists(filename):
+        temp = open(filename)
+        lines = temp.readlines()
+        for line in lines:
+            if num_line == num:
+                norm_mode = float64(line.split()[0:])
+            if num > (3 * n_atoms):  # 3*n
+                print("The mode you are requesting does not exist :)")
+            num_line = num_line + 1
+    else:
+        print("Normal modes not found, run get_vibrations.py (run mode = 1)")
+        sys.exit(1)
+    norm_mode = norm_mode.reshape(n_atoms, 3)
+    norm_mode = np.array(norm_mode)
+    return norm_mode
+
+def read_geo(filename):
+    """Function to transfer coordinates from atom_frac to atom"""
+    fdata = []
+    element = []
+    with open(filename) as f:
+        for line in f:
+            t = line.split()
+            if len(t) == 0:
+                continue
+            if t[0] == "#":
+                continue
+            elif t[0] == "atom":
+                fdata += [(float(t[1]), float(t[2]), float(t[3]))]
+                element += [(str(t[4]))]
+            else:
+                continue
+    fdata = np.array(fdata)
+    element = np.array(element)
+    return fdata, element
+
+def shift_geo(f,col,scanxyz,name, direction, num,n_atoms):
+    fdata2 = []
+    norm_mode = car_modes(n_atoms,name,num)
+    frac = fraction(f, norm_mode)
+    fdata, element = read_geo("geometry.in")
+    pos = fdata + frac * norm_mode
+    neg = fdata - frac * norm_mode
+    folder = (
+        name
+        + "_disp_"
+        + str(direction)
+        + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
+    )
+    # print("Geometry Files copied successfully.")
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    new_geo = open(folder + "/geometry.in", "w")
+    for i in range(0, len(fdata)):
+        if direction == "pos":
+            new_geo.write(
+                "atom"
+                + ((" %.8f" * 3) % tuple(pos[i, :]))
+                + " "
+                + element[i]
+                + "\n"
+            )
+        else:
+            new_geo.write(
+                "atom"
+                + ((" %.8f" * 3) % tuple(neg[i, :]))
+                + " "
+                + element[i]
+                + "\n"
+            )
+def precontrol(filename,name,scanxyz,col, direction,AIMS_CALL,run_aims):
+    """Function to copy and edit control.in"""
+    aimsout = "aims.out"
+    folder = (
+        name
+        + "_disp_"
+        + str(direction)
+        + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
+    )
+    f = open(filename, "r")  # read control.in template
+    template_control = f.read()
+    f.close
+    # print("Cube Files copied successfully.")
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    shutil.copy("tipA_05_vh_ft_0049_3221meV_x1000.cube", folder)
+    shutil.copy("zeros.cube", folder)
+    new_control = open(folder + "/control.in", "w")
+    new_control.write(
+        template_control
+        + "DFPT local_polarizability nearfield \n "
+        + "DFPT local_parameters numerical zeros.cube zeros.cube tipA_05_vh_ft_0049_3221meV_x1000.cube  \n"
+    )
+    new_control.close()
+    os.chdir(folder)
+    # Change directoy
+    if run_aims:
+        os.system(
+            AIMS_CALL + " > " + aimsout
+        )  # Run aims and pipe the output into a file named 'filename'
+    os.chdir("..")
+
+def postpro(direction,name,scanxyz,col,AIMS_CALL,run_aims):
+    """Function to read outputs"""
+    alpha = np.zeros(6)
+    folder = (
+        name
+        + "_disp_"
+        + str(direction)
+        + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
+    )
+    aimsout = "aims.out"
+    #      # checking existence of aims.out
+    if os.path.exists(folder + "/" + aimsout):
+        data = open(folder + "/" + aimsout)
+        out = data.readlines()
+        if "Have a nice day." in out[-2]:
+            print("Aims calculation is complete for direction  "
+                + str(direction)
+                + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
+                + "\n")
+        else:
+            print(
+                "Aims calculation isnt complete for direction "
+                + str(direction)
+                + "_{}_{}_{}".format(
+                    scanxyz[col][0], scanxyz[col][1], scanxyz[col][2]
+                )
+                + "\n"
+            )
+        # os.chdir(folder)
+        # if run_aims:
+        #     os.system(
+        #         AIMS_CALL + " > " + aimsout
+        #     )  # Run aims and pipe the output into a file named 'filename'
+        # os.chdir("..")
+        #        sys.exit(1)
+        for line in out:
+            if line.rfind("Polarizability") != -1:
+                alpha = float64(split_line(line)[-6:])  # alpha_zz
+    else:
+        os.chdir(folder)
+        if run_aims:
+            os.system(
+                AIMS_CALL + " > " + aimsout
+            )  # Run aims and pipe the output into a file named 'filename'
+        os.chdir("..")
+    return alpha
+
 
 
 def main():
@@ -152,9 +301,7 @@ def main():
     z = options.height
     n = options.step
     d = options.size
-    p = options.plot
     tip = options.tip
-    tip = np.array(tip)
     # Construct scanning grid. Store coordinates in scanxyz
     gridinfo = {}
     gridinfo["org"] = [tip[0], tip[1], tip[2] - z]
@@ -168,189 +315,30 @@ def main():
         run_aims = True
     newline_ir = "\n"
     irname = name + ".data"
-    for col in range(n[0] * n[1]):
-        # Moving the molecule below the tip
-        molc = read("geometry.in", format="aims")
-        COM = molc.get_center_of_mass(scaled=False)
-        V = Atoms(positions=[COM])
-        tp = tip
-        # Moving the molecule center of mass to the tip's
-        molc.translate(tip - V.positions)
-        molc.write("geometry_00.in", format="aims")
-        n_atoms = moveCOM(z, col, gridinfo)
-        tp = [scanxyz[col][0], scanxyz[col][1], scanxyz[col][2]]
-        # Reading the normal modes from get_vibrations.py
-        def car_modes(num):
-            num_line = 1
-            norm_mode = np.array([])
-            filename = "car_eig_vec." + str(name) + ".dat"
-            if os.path.exists(filename):
-                temp = open(filename)
-                lines = temp.readlines()
-                for line in lines:
-                    if num_line == num:
-                        norm_mode = float64(line.split()[0:])
-                    if num > (3 * n_atoms):  # 3*n
-                        print("The mode you are requesting does not exist :)")
-                    num_line = num_line + 1
-            else:
-                print("Normal modes not found, run get_vibrations.py (run mode = 1)")
-                sys.exit(1)
-            norm_mode = norm_mode.reshape(n_atoms, 3)
-            norm_mode = np.array(norm_mode)
-            return norm_mode
-
-        def read_geo(filename):
-            """Function to transfer coordinates from atom_frac to atom"""
-            fdata = []
-            element = []
-            with open(filename) as f:
-                for line in f:
-                    t = line.split()
-                    if len(t) == 0:
-                        continue
-                    if t[0] == "#":
-                        continue
-                    elif t[0] == "atom":
-                        fdata += [(float(t[1]), float(t[2]), float(t[3]))]
-                        element += [(str(t[4]))]
-                    else:
-                        continue
-            fdata = np.array(fdata)
-            element = np.array(element)
-            return fdata, element
-
-        def shift_geo(direction, num):
-            fdata2 = []
-            norm_mode = car_modes(num)
-            frac = fraction(f, norm_mode)
-            fdata, element = read_geo("geometry.in")
-            pos = fdata + frac * norm_mode
-            neg = fdata - frac * norm_mode
-            folder = (
-                name
-                + "_disp_"
-                + str(direction)
-                + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
-            )
-            # print("Geometry Files copied successfully.")
-            if not os.path.exists(folder):
-                os.mkdir(folder)
-            new_geo = open(folder + "/geometry.in", "w")
-            for i in range(0, len(fdata)):
-                if direction == "pos":
-                    new_geo.write(
-                        "atom"
-                        + ((" %.8f" * 3) % tuple(pos[i, :]))
-                        + " "
-                        + element[i]
-                        + "\n"
-                    )
-                else:
-                    new_geo.write(
-                        "atom"
-                        + ((" %.8f" * 3) % tuple(neg[i, :]))
-                        + " "
-                        + element[i]
-                        + "\n"
-                    )
-
-        shift_geo("neg", num)
-        shift_geo("pos", num)
-
-        def precontrol(filename, direction, num):
-            """Function to copy and edit control.in"""
-            aimsout = "aims.out"
-            folder = (
-                name
-                + "_disp_"
-                + str(direction)
-                + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
-            )
-            f = open(filename, "r")  # read control.in template
-            template_control = f.read()
-            f.close
-            # print("Cube Files copied successfully.")
-            if not os.path.exists(folder):
-                os.mkdir(folder)
-            shutil.copy("tipA_05_vh_ft_0049_3221meV_x1000.cube", folder)
-            shutil.copy("zeros.cube", folder)
-            new_control = open(folder + "/control.in", "w")
-            new_control.write(
-                template_control
-                + "DFPT local_polarizability nearfield \n "
-                + "DFPT local_parameters numerical zeros.cube zeros.cube tipA_05_vh_ft_0049_3221meV_x1000.cube  \n"
-            )
-            new_control.close()
-            os.chdir(folder)
-            # Change directoy
-            if run_aims:
-                os.system(
-                    AIMS_CALL + " > " + aimsout
-                )  # Run aims and pipe the output into a file named 'filename'
-            os.chdir("..")
-
-        precontrol("control.in", "pos", num)
-        precontrol("control.in", "neg", num)
-    print("The calculation started..")
-    norm_mode = car_modes(num)
+    print("The calculation will start ...")
+    molc = read("geometry.in", format="aims")
+    n_atoms = len((molc.numbers))
+    norm_mode = car_modes(n_atoms,name,num)
     frac = fraction(f, norm_mode)
     print("fraction of shifting of the normal mode", frac)
+    # Moving the molecule below the tip
+    molc = read("geometry.in", format="aims")
+    COM = molc.get_center_of_mass(scaled=False)
+    V = Atoms(positions=[COM])
+    # Moving the molecule center of mass to the tip's
+    molc.translate(tip - V.positions)
+    molc.write("geometry_00.in", format="aims")
+    for col in range(n[0] * n[1]):
+        moveCOM(z, col, gridinfo)
+        shift_geo(f,col,scanxyz,name,"neg", num,n_atoms)
+        shift_geo(f,col,scanxyz,name,"pos", num,n_atoms)
+
+        precontrol("control.in",name,scanxyz,col, "pos", AIMS_CALL,run_aims)
+        precontrol("control.in",name,scanxyz,col, "neg", AIMS_CALL,run_aims)
     for col in range(n[0] * n[1]):
 
-        def postpro(direction, num):
-            """Function to read outputs"""
-            alpha = np.zeros(6)
-            folder = (
-                name
-                + "_disp_"
-                + str(direction)
-                + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
-            )
-            aimsout = "aims.out"
-            #      # checking existence of aims.out
-            if os.path.exists(folder + "/" + aimsout):
-                data = open(folder + "/" + aimsout)
-                out = data.readlines()
-                if "Have a nice day." in out[-2]:
-                    print(
-                        "Aims calculation is complete for direction  "
-                        + str(direction)
-                        + "_{}_{}_{}".format(
-                            scanxyz[col][0], scanxyz[col][1], scanxyz[col][2]
-                        )
-                        + "\n"
-                    )
-                else:
-                    print(
-                        "Aims calculation isnt complete for direction "
-                        + str(direction)
-                        + "_{}_{}_{}".format(
-                            scanxyz[col][0], scanxyz[col][1], scanxyz[col][2]
-                        )
-                        + "\n"
-                    )
-                # os.chdir(folder)
-                # if run_aims:
-                #     os.system(
-                #         AIMS_CALL + " > " + aimsout
-                #     )  # Run aims and pipe the output into a file named 'filename'
-                # os.chdir("..")
-                #        sys.exit(1)
-                for line in out:
-                    if line.rfind("Polarizability") != -1:
-                        alpha = float64(split_line(line)[-6:])  # alpha_zz
-            else:
-                os.chdir(folder)
-                if run_aims:
-                    os.system(
-                        AIMS_CALL + " > " + aimsout
-                    )  # Run aims and pipe the output into a file named 'filename'
-                os.chdir("..")
-            return alpha
-
-        alpha_pos = postpro("pos", num)
-        alpha_neg = postpro("neg", num)
+        alpha_pos = postpro("pos", name,scanxyz,col,AIMS_CALL,run_aims)
+        alpha_neg = postpro("neg", name,scanxyz,col,AIMS_CALL,run_aims)
         # Intensity
         alphas = alpha_pos - alpha_neg
         alphas = alphas / (2 * frac)
@@ -399,7 +387,7 @@ def main():
         plt.rc("legend", fontsize=MEDIUM_SIZE)  # legend fontsize
         plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
         # plt.rcParams['font.family'] = 'serif'
-        # plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+        # scheiner.stephan@gmail.complt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
         params = {
             "axes.labelsize": 22,
             "font.size": 22,
@@ -426,31 +414,6 @@ def main():
             aspect="equal",
             interpolation="spline36",
         )
-        ##################################
-        #   if os.path.exists('geometry_00.in'):
-        #     # print(" geometry file found")
-        #      geometry=open('geometry_00.in','r')
-        #      geometry.close
-        #   n_line=0
-        #   lines=geometry.readlines()
-        #   ii=0
-        #   coord=np.zeros(shape=(n_atoms,3))
-        #   for line in lines:
-
-        #       if line.rfind('atom')!=-1:
-
-        #          coord[ii,:]= np.float64(split_line(line)[1:4])
-
-        #          ii=ii+1
-
-        #   if coord is not None:
-
-        #      x = coord[:, 0]-(-0.000030)
-        #      y = coord[:, 1]-(-1.696604)
-        #      z = coord[:, 2]
-        #      a = np.argsort(z)
-
-        #      plt.plot(x[a], y[a], 'wo', markersize=2, mew=2, color='white')
         plt.title("TERS Image")
         plt.xlabel("Distance, \AA")
         plt.ylabel("Distance, \AA")
