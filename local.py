@@ -375,8 +375,6 @@ def main():
         plt.rc("ytick", labelsize=MEDIUM_SIZE)  # fontsize of the tick labels
         plt.rc("legend", fontsize=MEDIUM_SIZE)  # legend fontsize
         plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
-        # plt.rcParams['font.family'] = 'serif'
-        # scheiner.stephan@gmail.complt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
         params = {
             "axes.labelsize": 22,
             "font.size": 22,
