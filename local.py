@@ -12,10 +12,8 @@ import sys
 from argparse import ArgumentParser
 
 import numpy as np
-from numpy import *
 from ase import Atoms
 from ase.io import read
-from numpy import *
 
 
 def construct_grid(gridinfo):
@@ -60,8 +58,9 @@ def fraction(f, norm_mode):  # norm_mode is here the mode in Cartesian coordinat
     frac = f / (np.linalg.norm(norm_mode))
     return frac
 
+
 # Reading the normal modes from get_vibrations.py
-def car_modes(n_atoms,name,num):
+def car_modes(n_atoms, name, num):
     num_line = 1
     norm_mode = np.array([])
     filename = "car_eig_vec." + str(name) + ".dat"
@@ -70,7 +69,7 @@ def car_modes(n_atoms,name,num):
         lines = temp.readlines()
         for line in lines:
             if num_line == num:
-                norm_mode = float64(line.split()[0:])
+                norm_mode = np.float64(line.split()[0:])
             if num > (3 * n_atoms):  # 3*n
                 print("The mode you are requesting does not exist :)")
             num_line = num_line + 1
@@ -80,6 +79,7 @@ def car_modes(n_atoms,name,num):
     norm_mode = norm_mode.reshape(n_atoms, 3)
     norm_mode = np.array(norm_mode)
     return norm_mode
+
 
 def read_geo(filename):
     """Function to transfer coordinates from atom_frac to atom"""
@@ -101,9 +101,9 @@ def read_geo(filename):
     element = np.array(element)
     return fdata, element
 
-def shift_geo(f,col,scanxyz,name, direction, num,n_atoms):
-    fdata2 = []
-    norm_mode = car_modes(n_atoms,name,num)
+
+def shift_geo(f, col, scanxyz, name, direction, num, n_atoms):
+    norm_mode = car_modes(n_atoms, name, num)
     frac = fraction(f, norm_mode)
     fdata, element = read_geo("geometry.in")
     pos = fdata + frac * norm_mode
@@ -121,21 +121,15 @@ def shift_geo(f,col,scanxyz,name, direction, num,n_atoms):
     for i in range(0, len(fdata)):
         if direction == "pos":
             new_geo.write(
-                "atom"
-                + ((" %.8f" * 3) % tuple(pos[i, :]))
-                + " "
-                + element[i]
-                + "\n"
+                "atom" + ((" %.8f" * 3) % tuple(pos[i, :])) + " " + element[i] + "\n"
             )
         else:
             new_geo.write(
-                "atom"
-                + ((" %.8f" * 3) % tuple(neg[i, :]))
-                + " "
-                + element[i]
-                + "\n"
+                "atom" + ((" %.8f" * 3) % tuple(neg[i, :])) + " " + element[i] + "\n"
             )
-def precontrol(filename,name,scanxyz,col, direction,AIMS_CALL,run_aims):
+
+
+def precontrol(filename, name, scanxyz, col, direction, AIMS_CALL, run_aims):
     """Function to copy and edit control.in"""
     aimsout = "aims.out"
     folder = (
@@ -167,7 +161,8 @@ def precontrol(filename,name,scanxyz,col, direction,AIMS_CALL,run_aims):
         )  # Run aims and pipe the output into a file named 'filename'
     os.chdir("..")
 
-def postpro(direction,name,scanxyz,col,AIMS_CALL,run_aims):
+
+def postpro(direction, name, scanxyz, col, AIMS_CALL, run_aims):
     """Function to read outputs"""
     alpha = np.zeros(6)
     folder = (
@@ -182,17 +177,17 @@ def postpro(direction,name,scanxyz,col,AIMS_CALL,run_aims):
         data = open(folder + "/" + aimsout)
         out = data.readlines()
         if "Have a nice day." in out[-2]:
-            print("Aims calculation is complete for direction  "
+            print(
+                "Aims calculation is complete for direction  "
                 + str(direction)
                 + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
-                + "\n")
+                + "\n"
+            )
         else:
             print(
                 "Aims calculation isnt complete for direction "
                 + str(direction)
-                + "_{}_{}_{}".format(
-                    scanxyz[col][0], scanxyz[col][1], scanxyz[col][2]
-                )
+                + "_{}_{}_{}".format(scanxyz[col][0], scanxyz[col][1], scanxyz[col][2])
                 + "\n"
             )
         # os.chdir(folder)
@@ -204,7 +199,7 @@ def postpro(direction,name,scanxyz,col,AIMS_CALL,run_aims):
         #        sys.exit(1)
         for line in out:
             if line.rfind("Polarizability") != -1:
-                alpha = float64(split_line(line)[-6:])  # alpha_zz
+                alpha = np.float64(split_line(line)[-6:])  # alpha_zz
     else:
         os.chdir(folder)
         if run_aims:
@@ -213,7 +208,6 @@ def postpro(direction,name,scanxyz,col,AIMS_CALL,run_aims):
             )  # Run aims and pipe the output into a file named 'filename'
         os.chdir("..")
     return alpha
-
 
 
 def main():
@@ -318,7 +312,7 @@ def main():
     print("The calculation will start ...")
     molc = read("geometry.in", format="aims")
     n_atoms = len((molc.numbers))
-    norm_mode = car_modes(n_atoms,name,num)
+    norm_mode = car_modes(n_atoms, name, num)
     frac = fraction(f, norm_mode)
     print("fraction of shifting of the normal mode", frac)
     # Moving the molecule below the tip
@@ -330,33 +324,32 @@ def main():
     molc.write("geometry_00.in", format="aims")
     for col in range(n[0] * n[1]):
         moveCOM(z, col, gridinfo)
-        shift_geo(f,col,scanxyz,name,"neg", num,n_atoms)
-        shift_geo(f,col,scanxyz,name,"pos", num,n_atoms)
+        shift_geo(f, col, scanxyz, name, "neg", num, n_atoms)
+        shift_geo(f, col, scanxyz, name, "pos", num, n_atoms)
 
-        precontrol("control.in",name,scanxyz,col, "pos", AIMS_CALL,run_aims)
-        precontrol("control.in",name,scanxyz,col, "neg", AIMS_CALL,run_aims)
+        precontrol("control.in", name, scanxyz, col, "pos", AIMS_CALL, run_aims)
+        precontrol("control.in", name, scanxyz, col, "neg", AIMS_CALL, run_aims)
     for col in range(n[0] * n[1]):
-
-        alpha_pos = postpro("pos", name,scanxyz,col,AIMS_CALL,run_aims)
-        alpha_neg = postpro("neg", name,scanxyz,col,AIMS_CALL,run_aims)
+        alpha_pos = postpro("pos", name, scanxyz, col, AIMS_CALL, run_aims)
+        alpha_neg = postpro("neg", name, scanxyz, col, AIMS_CALL, run_aims)
         # Intensity
         alphas = alpha_pos - alpha_neg
         alphas = alphas / (2 * frac)
+        alphaszz = alphas[2]
         # Intensity
         # polarizability tensor derivative
-        alphasxx = alphas[0]
-        alphasyy = alphas[1]
-        alphaszz = alphas[2]
-        alphasxy = alphas[3]
-        alphasxz = alphas[4]
-        alphasyz = alphas[5]
-        alpha = (alphasxx + alphasyy + alphaszz) * (1.0 / 3)
-        beta = (
-            (alphasxx - alphasyy) ** 2
-            + (alphasxx - alphaszz) ** 2
-            + (alphasyy - alphaszz) ** 2
-            + 6 * ((alphasxy) ** 2 + (alphasxz) ** 2 + (alphasyz) ** 2)
-        )
+        # alphasxx = alphas[0]
+        # alphasyy = alphas[1]
+        # alphasxy = alphas[3]
+        # alphasxz = alphas[4]
+        # alphasyz = alphas[5]
+        # alpha = (alphasxx + alphasyy + alphaszz) * (1.0 / 3)
+        # beta = (
+        #     (alphasxx - alphasyy) ** 2
+        #     + (alphasxx - alphaszz) ** 2
+        #     + (alphasyy - alphaszz) ** 2
+        #     + 6 * ((alphasxy) ** 2 + (alphasxz) ** 2 + (alphasyz) ** 2)
+        # )
         # man Scattering Intensity:
         I = ((alphaszz) ** 2) * 0.02195865620442408  # bohr^6/ang^2 to ang^4
         # Saving Intensity
@@ -369,14 +362,10 @@ def main():
         ir.writelines(newline_ir)
         ir.close()
     if options.plot:
-        import matplotlib.cm as cm
         import matplotlib.pyplot as plt
-        import matplotlib.transforms as tr
         from matplotlib import rc, rcParams
-        from matplotlib.colors import LogNorm
 
         rc("text", usetex=True)
-        SMALL_SIZE = 14
         MEDIUM_SIZE = 18
         BIGGER_SIZE = 20
         plt.rc("font", size=MEDIUM_SIZE)  # controls default text sizes
@@ -394,12 +383,9 @@ def main():
             "xtick.labelsize": 22,
             "ytick.labelsize": 22,
             "mathtext.fontset": "stix",
-            #'font.family': 'sans-serif',
-            #'font.sans-serif': 'Arial',
             "axes.linewidth": 2.0,
         }
         rcParams.update(params)
-        fig = plt.figure(figsize=(6.5, 6.5))
         gridx, gridy, gridz = np.loadtxt(name + ".data", unpack=True)
         gridx = gridx - tip[0]
         gridy = gridy - tip[1]
