@@ -351,10 +351,10 @@ def main():
         #     + 6 * ((alphasxy) ** 2 + (alphasxz) ** 2 + (alphasyz) ** 2)
         # )
         # man Scattering Intensity:
-        I = ((alphaszz) ** 2) * 0.02195865620442408  # bohr^6/ang^2 to ang^4
+        Int = ((alphaszz) ** 2) * 0.02195865620442408  # bohr^6/ang^2 to ang^4
         # Saving Intensity
         newline_ir = newline_ir + "{0:25.8f} {1:25.8f}{2:25.8f}\n".format(
-            scanxyz[col][0], scanxyz[col][1], I
+            scanxyz[col][0], scanxyz[col][1], Int
         )
 
         ir = open(irname, "w")
