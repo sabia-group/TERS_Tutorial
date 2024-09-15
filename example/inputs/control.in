@@ -3,6 +3,7 @@
   spin          none
   relativistic  atomic_zora scalar
   vdw_correction_hirshfeld
+  dfpt_centralised .false.
 
 ################################################################################
 #
